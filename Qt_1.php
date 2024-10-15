@@ -1,64 +1,69 @@
-<?php
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Produtos</title>
+</head>
+<body>
+    <form method="post">
+        <?php for ($i = 1; $i <= 5; $i++): ?>
+            <label for="produto<?=$i?>">Produto <?=$i?>:</label>
+            <input type="text" name="produto<?=$i?>" required>
+            <label for="preco<?=$i?>">Preço:</label>
+            <input type="number" name="preco<?=$i?>" step="0.01" required>
+            <br>
+        <?php endfor; ?>
+        <input type="submit" value="Enviar">
+    </form>
 
-function coletarProdutos() {
-    $produtos = [];
-    for ($i = 0; $i < 5; $i++) {
-        $nome = readline("Digite o nome do produto: ");
-        $preco = floatval(readline("Digite o preço do $nome: R$ "));
-        $produtos[] = ['nome' => $nome, 'preco' => $preco];
-    }
-    return $produtos;
-}
+    <?php
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        $produtos = [];
+        $precos = [];
 
-function contarProdutosInferiores($produtos, $limite) {
-    $contagem = 0;
-    foreach ($produtos as $produto) {
-        if ($produto['preco'] < $limite) {
-            $contagem++;
+        for ($i = 1; $i <= 5; $i++) {
+            $produtos[] = $_POST["produto$i"];
+            $precos[] = (float)$_POST["preco$i"];
         }
-    }
-    return $contagem;
-}
 
-function produtosEntrePreco($produtos, $limiteInferior, $limiteSuperior) {
-    $nomes = [];
-    foreach ($produtos as $produto) {
-        if ($produto['preco'] >= $limiteInferior && $produto['preco'] <= $limiteSuperior) {
-            $nomes[] = $produto['nome'];
+        function quantidadePrecoInferior($precos, $valor) {
+            return count(array_filter($precos, function ($preco) use ($valor) {
+                return $preco < $valor;
+            }));
         }
-    }
-    return $nomes;
-}
 
-function mediaPrecosSuperiores($produtos, $limite) {
-    $soma = 0;
-    $contagem = 0;
-    foreach ($produtos as $produto) {
-        if ($produto['preco'] > $limite) {
-            $soma += $produto['preco'];
-            $contagem++;
+        function produtosEntrePrecos($produtos, $precos, $min, $max) {
+            return array_filter($produtos, function ($produto, $key) use ($precos, $min, $max) {
+                return $precos[$key] >= $min && $precos[$key] <= $max;
+            }, ARRAY_FILTER_USE_BOTH);
         }
+
+        function mediaPrecoSuperior($precos, $valor) {
+            $filtrados = array_filter($precos, function ($preco) use ($valor) {
+                return $preco > $valor;
+            });
+            return array_sum($filtrados) / count($filtrados);
+        }
+
+        $quantidadeInferior50 = quantidadePrecoInferior($precos, 50);
+        $produtosEntre50e100 = produtosEntrePrecos($produtos, $precos, 50, 100);
+        $mediaSuperior100 = mediaPrecoSuperior($precos, 100);
+    ?>
+
+    <h2>Resultados:</h2>
+    <p>Quantidade de produtos com preço inferior a R$50,00: <?= $quantidadeInferior50 ?></p>
+    <p>Produtos com preço entre R$50,00 e R$100,00:
+        <ul>
+            <?php foreach ($produtosEntre50e100 as $produto): ?>
+                <li><?= $produto ?></li>
+            <?php endforeach; ?>
+        </ul>
+    </p>
+    <p>Média dos preços dos produtos com preço superior a R$100,00: <?= number_format($mediaSuperior100, 2) ?></p>
+
+    <?php
     }
-    return $contagem > 0 ? $soma / $contagem : 0;
-}
-
-function main() {
-    $produtos = coletarProdutos();
-    
-    // a. Quantidade de produtos com preço inferior a R$50,00
-    $qtdInferiores = contarProdutosInferiores($produtos, 50);
-    echo "\na. Quantidade de produtos com preço inferior a R$50,00: $qtdInferiores";
-
-    // b. Nome dos produtos com preço entre R$50,00 e R$100,00
-    $nomesEntre = produtosEntrePreco($produtos, 50, 100);
-    echo "\nb. Produtos com preço entre R$50,00 e R$100,00: " . implode(", ", $nomesEntre);
-
-    // c. Média dos preços dos produtos com preço superior a R$100,00
-    $mediaSuperiores = mediaPrecosSuperiores($produtos, 100);
-    echo "\nc. Média dos preços dos produtos com preço superior a R$100,00: R$ " . number_format($mediaSuperiores, 2, ',', '.');
-}
-
-// Chama a função principal
-main();
-
-?>
+    ?>
+</body>
+</html>
